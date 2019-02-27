@@ -25,6 +25,8 @@ script:
 deploy:
   - provider: script
     script: aws s3 cp README.md s3://eha-eidsr-sl/dhis2_wars/
+    on:
+      branch: build-travis
 
 branches:
   only:
