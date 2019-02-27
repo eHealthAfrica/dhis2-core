@@ -23,7 +23,8 @@ script:
 # Uploads the built .war file to eHA's S3 so that the test env can run from it  
 
 deploy:
-  - aws s3 cp README.md s3://eha-eidsr-sl/dhis2_wars/
+  - provider: script
+    script: aws s3 cp README.md s3://eha-eidsr-sl/dhis2_wars/
 
 branches:
   only:
