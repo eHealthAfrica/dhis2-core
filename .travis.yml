@@ -22,7 +22,7 @@ script:
 #   -  mvn clean install -DskipTests=false -DargLine="-Xmx512m -Xms256m" -q --update-snapshots -f ./dhis-2/dhis-web/pom.xml
 # Uploads the built .war file to eHA's S3 so that the test env can run from it  
 
-before_deploy:
+deploy:
   - aws s3 cp README.md s3://eha-eidsr-sl/dhis2_wars/
 
 branches:
