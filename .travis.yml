@@ -13,7 +13,7 @@ before_install:
 - rm ~/.m2/settings.xml
 
 install:
-  - pip install awscli
+  - sudo pip install awscli
 
 # script:
 #   -  mvn clean install -DskipTests=false -DargLine="-Xmx512m -Xms256m" -q --update-snapshots -f  ./dhis-2/pom.xml
