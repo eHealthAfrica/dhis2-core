@@ -22,6 +22,7 @@ script:
 #Uploads the built .war file to eHA's S3 so that the test env can run from it  
 deploy:
   - provider: script
+    skip_cleanup: true
     script: aws s3 cp ./dhis-2/dhis-web/dhis-web-portal/target/dhis.war s3://eha-eidsr-sl/dhis2_wars/dhis2_eha-sms.war
     on:
       branch: build-travis
