@@ -15,9 +15,17 @@ before_install:
 install:
   - sudo pip install awscli
 
-script:
-  -  mvn clean install -DskipTests=false -DargLine="-Xmx512m -Xms256m" -q --update-snapshots -f  ./dhis-2/pom.xml
-  -  mvn clean install -DskipTests=false -DargLine="-Xmx512m -Xms256m" -q --update-snapshots -f ./dhis-2/dhis-web/pom.xml
+jobs: 
+  include:
+    - stage: tests 
+      name: unit
+      script: 
+        - mvn clean install -DskipTests=false -q --update-snapshots -f ./dhis-2/pom.xml
+        - mvn clean install -DskipTests=false -q --update-snapshots -f ./dhis-2/dhis-web/pom.xml
+        
+    - name: integration
+      script: 
+        - mvn clean install -Pintegration -f ./dhis-2/pom.xml
 
 #Uploads the built .war file to eHA's S3 so that the test env can run from it  
 deploy:
