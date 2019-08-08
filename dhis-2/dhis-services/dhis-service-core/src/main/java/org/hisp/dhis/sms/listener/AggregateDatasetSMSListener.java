@@ -1,38 +1,40 @@
 package org.hisp.dhis.sms.listener;
 
 /*
-* Copyright (c) 2004-2018, University of Oslo
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are met:
-* Redistributions of source code must retain the above copyright notice, this
-* list of conditions and the following disclaimer.
-*
-* Redistributions in binary form must reproduce the above copyright notice,
-* this list of conditions and the following disclaimer in the documentation
-* and/or other materials provided with the distribution.
-* Neither the name of the HISP project nor the names of its contributors may
-* be used to endorse or promote products derived from this software without
-* specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2004-2019, University of Oslo
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * Neither the name of the HISP project nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hisp.dhis.category.CategoryOptionCombo;
 import org.hisp.dhis.category.CategoryService;
 import org.hisp.dhis.dataelement.DataElement;
@@ -62,7 +64,6 @@ import org.hisp.dhis.trackedentity.TrackedEntityAttributeService;
 import org.hisp.dhis.trackedentity.TrackedEntityTypeService;
 import org.hisp.dhis.user.User;
 import org.hisp.dhis.user.UserService;
-import org.jfree.util.Log;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +74,7 @@ public class AggregateDatasetSMSListener
     extends
     NewSMSListener
 {
+    private static final Log log = LogFactory.getLog( AggregateDatasetSMSListener.class );
 
     private final DataSetService dataSetService;
 
@@ -128,9 +130,7 @@ public class AggregateDatasetSMSListener
             throw new SMSProcessingException( SMSResponse.INVALID_AOC.set( aocid ) );
         }
 
-        // TODO: This seems a bit backwards, why is there no
-        // dataSet.hasOrganisationUnit?
-        if ( !orgUnit.getDataSets().contains( dataSet ) )
+        if ( !dataSet.hasOrganisationUnit( orgUnit ) )
         {
             throw new SMSProcessingException( SMSResponse.OU_NOTIN_DATASET.set( ouid, dsid ) );
         }
@@ -184,7 +184,7 @@ public class AggregateDatasetSMSListener
             DataElement de = dataElementService.getDataElement( deid.uid );
             if ( de == null )
             {
-                Log.warn( "Data element [" + deid + "] does not exist. Continuing with submission..." );
+                log.warn( "Data element [" + deid + "] does not exist. Continuing with submission..." );
                 errorElems.add( combid );
                 continue;
             }
@@ -192,7 +192,7 @@ public class AggregateDatasetSMSListener
             CategoryOptionCombo coc = categoryService.getCategoryOptionCombo( cocid.uid );
             if ( coc == null )
             {
-                Log.warn( "Category Option Combo [" + cocid + "] does not exist. Continuing with submission..." );
+                log.warn( "Category Option Combo [" + cocid + "] does not exist. Continuing with submission..." );
                 errorElems.add( combid );
                 continue;
             }
@@ -200,7 +200,7 @@ public class AggregateDatasetSMSListener
             String val = smsdv.getValue();
             if ( val == null || StringUtils.isEmpty( val ) )
             {
-                Log.warn( "Value for [" + combid + "]  is null or empty. Continuing with submission..." );
+                log.warn( "Value for [" + combid + "]  is null or empty. Continuing with submission..." );
                 continue;
             }
 
@@ -227,7 +227,7 @@ public class AggregateDatasetSMSListener
                 boolean addedDataValue = dataValueService.addDataValue( dv );
                 if ( !addedDataValue )
                 {
-                    Log.warn( "Failed to submit data value [" + combid + "]. Continuing with submission..." );
+                    log.warn( "Failed to submit data value [" + combid + "]. Continuing with submission..." );
                     errorElems.add( combid );
                 }
             }

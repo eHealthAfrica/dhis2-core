@@ -1,13 +1,5 @@
 package org.hisp.dhis.sms.listener;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
 /*
  * Copyright (c) 2004-2019, University of Oslo
  * All rights reserved.
@@ -36,7 +28,17 @@ import java.util.TreeMap;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hisp.dhis.category.CategoryOptionCombo;
 import org.hisp.dhis.category.CategoryService;
 import org.hisp.dhis.common.ValueType;
@@ -67,7 +69,6 @@ import org.hisp.dhis.sms.parse.SMSParserException;
 import org.hisp.dhis.system.util.SmsUtils;
 import org.hisp.dhis.user.CurrentUserService;
 import org.hisp.dhis.user.UserService;
-import org.jfree.util.Log;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,6 +79,8 @@ public class DataValueSMSListener
     extends
     CommandSMSListener
 {
+    private static final Log log = LogFactory.getLog( DataValueSMSListener.class );
+
     private static final String DATASET_LOCKED = "Dataset: %s is locked for period: %s";
 
     // -------------------------------------------------------------------------
@@ -495,7 +498,7 @@ public class DataValueSMSListener
         }
         else
         {
-            Log.info( "No sms configuration found." );
+            log.info( "No sms configuration found." );
         }
     }
 

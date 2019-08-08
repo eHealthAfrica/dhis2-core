@@ -1,44 +1,36 @@
 package org.hisp.dhis.sms.listener;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /*
-* Copyright (c) 2004-2018, University of Oslo
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are met:
-* Redistributions of source code must retain the above copyright notice, this
-* list of conditions and the following disclaimer.
-*
-* Redistributions in binary form must reproduce the above copyright notice,
-* this list of conditions and the following disclaimer in the documentation
-* and/or other materials provided with the distribution.
-* Neither the name of the HISP project nor the names of its contributors may
-* be used to endorse or promote products derived from this software without
-* specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
+ * Copyright (c) 2004-2019, University of Oslo
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * Neither the name of the HISP project nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hisp.dhis.category.CategoryOptionCombo;
 import org.hisp.dhis.category.CategoryService;
 import org.hisp.dhis.common.IdentifiableObject;
@@ -73,17 +65,28 @@ import org.hisp.dhis.trackedentity.TrackedEntityType;
 import org.hisp.dhis.trackedentity.TrackedEntityTypeService;
 import org.hisp.dhis.user.User;
 import org.hisp.dhis.user.UserService;
-import org.jfree.util.Log;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Transactional
 public abstract class NewSMSListener
     extends
     BaseSMSListener
 {
+    private static final Log log = LogFactory.getLog( NewSMSListener.class );
+
     protected abstract SMSResponse postProcess( IncomingSms sms, SMSSubmission submission )
         throws SMSProcessingException;
 
@@ -168,14 +171,14 @@ public abstract class NewSMSListener
         }
         catch ( Exception e )
         {
-            Log.error( e.getMessage() );
+            log.error( e.getMessage() );
             sendSMSResponse( SMSResponse.READ_ERROR, sms, header.getSubmissionID() );
             return;
         }
 
         // TODO: Can be removed - debugging line to check SMS submissions
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        Log.info( "New received SMS submission decoded as: " + gson.toJson( subm ) );
+        log.info( "New received SMS submission decoded as: " + gson.toJson( subm ) );
 
         SMSResponse resp = null;
         try
@@ -185,12 +188,12 @@ public abstract class NewSMSListener
         }
         catch ( SMSProcessingException e )
         {
-            Log.error( e.getMessage() );
+            log.error( e.getMessage() );
             sendSMSResponse( e.getResp(), sms, header.getSubmissionID() );
             return;
         }
 
-        Log.info( "SMS Response: " + resp.toString() );
+        log.info( "SMS Response: " + resp.toString() );
         sendSMSResponse( resp, sms, header.getSubmissionID() );
     }
 
@@ -216,7 +219,7 @@ public abstract class NewSMSListener
         catch ( Exception e )
         {
             e.printStackTrace();
-            Log.error( e.getMessage() );
+            log.error( e.getMessage() );
             return null;
         }
     }
@@ -269,17 +272,13 @@ public abstract class NewSMSListener
 
     private List<SMSMetadata.ID> getAllOrgUnitIds( Date lastSyncDate )
     {
-        List<OrganisationUnit> orgUnits = organisationUnitService.getAllOrganisationUnits();
-
-        return orgUnits.stream().map( o -> getIdFromMetadata( o, lastSyncDate ) ).filter( Objects::nonNull )
+        return organisationUnitService.getUIDsCreatedBefore( lastSyncDate ).stream().map( o -> new SMSMetadata.ID( o ) )
             .collect( Collectors.toList() );
     }
 
     private List<SMSMetadata.ID> getAllDataElements( Date lastSyncDate )
     {
-        List<DataElement> dataElements = dataElementService.getAllDataElements();
-
-        return dataElements.stream().map( o -> getIdFromMetadata( o, lastSyncDate ) ).filter( Objects::nonNull )
+        return dataElementService.getUIDsCreatedBefore( lastSyncDate ).stream().map( o -> new SMSMetadata.ID( o ) )
             .collect( Collectors.toList() );
     }
 
@@ -339,13 +338,13 @@ public abstract class NewSMSListener
             // TODO: Is this the correct way of handling errors here?
             if ( de == null )
             {
-                Log.warn( "Given data element [" + deid + "] could not be found. Continuing with submission..." );
+                log.warn( "Given data element [" + deid + "] could not be found. Continuing with submission..." );
                 errorUIDs.add( deid );
                 continue;
             }
             else if ( val == null || StringUtils.isEmpty( val ) )
             {
-                Log.warn( "Value for atttribute [" + deid + "] is null or empty. Continuing with submission..." );
+                log.warn( "Value for atttribute [" + deid + "] is null or empty. Continuing with submission..." );
                 continue;
             }
 
