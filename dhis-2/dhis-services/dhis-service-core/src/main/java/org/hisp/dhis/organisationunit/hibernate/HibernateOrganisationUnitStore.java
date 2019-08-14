@@ -31,6 +31,7 @@ package org.hisp.dhis.organisationunit.hibernate;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -70,10 +71,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @Repository( "org.hisp.dhis.organisationunit.OrganisationUnitStore" )
 public class HibernateOrganisationUnitStore
-    extends
-    HibernateIdentifiableObjectStore<OrganisationUnit>
-    implements
-    OrganisationUnitStore
+    extends HibernateIdentifiableObjectStore<OrganisationUnit>
+    implements OrganisationUnitStore
 {
     private static final Log log = LogFactory.getLog( HibernateOrganisationUnitStore.class );
 
@@ -116,13 +115,16 @@ public class HibernateOrganisationUnitStore
     @Override
     public Long getOrganisationUnitHierarchyMemberCount( OrganisationUnit parent, Object member, String collectionName )
     {
-        final String hql = "select count(*) from OrganisationUnit o " + "where o.path like :path "
-            + "and :object in elements(o." + collectionName + ")";
+        final String hql =
+            "select count(*) from OrganisationUnit o " +
+            "where o.path like :path " +
+            "and :object in elements(o." + collectionName + ")";
 
         Query<Long> query = getTypedQuery( hql );
-        query.setParameter( "path", parent.getPath() + "%" ).setParameter( "object", member );
+            query.setParameter( "path", parent.getPath() + "%" )
+            .setParameter( "object", member );
 
-        return query.getSingleResult();
+            return query.getSingleResult();
     }
 
     @Override
@@ -175,7 +177,7 @@ public class HibernateOrganisationUnitStore
             hql += hlp.whereAnd() + " o.hierarchyLevel <= :maxLevels ";
         }
 
-        hql += "order by o." + params.getOrderBy().getName();
+        hql += "order by o." +  params.getOrderBy().getName();
 
         Query query = getQuery( hql );
 
@@ -222,14 +224,14 @@ public class HibernateOrganisationUnitStore
     }
 
     @Override
-    public Map<String, Set<String>> getOrganisationUnitDataSetAssocationMap(
-        Collection<OrganisationUnit> organisationUnits, Collection<DataSet> dataSets )
+    public Map<String, Set<String>> getOrganisationUnitDataSetAssocationMap( Collection<OrganisationUnit> organisationUnits, Collection<DataSet> dataSets )
     {
         SqlHelper hlp = new SqlHelper();
 
-        String sql = "select ou.uid as ou_uid, array_agg(ds.uid) as ds_uid " + "from datasetsource d "
-            + "inner join organisationunit ou on ou.organisationunitid=d.sourceid "
-            + "inner join dataset ds on ds.datasetid=d.datasetid ";
+        String sql = "select ou.uid as ou_uid, array_agg(ds.uid) as ds_uid " +
+            "from datasetsource d " +
+            "inner join organisationunit ou on ou.organisationunitid=d.sourceid " +
+            "inner join dataset ds on ds.datasetid=d.datasetid ";
 
         if ( organisationUnits != null )
         {
@@ -249,8 +251,7 @@ public class HibernateOrganisationUnitStore
         {
             Assert.notEmpty( dataSets, "Data sets cannot be empty" );
 
-            sql += hlp.whereAnd() + " ds.datasetid in ("
-                + StringUtils.join( IdentifiableObjectUtils.getIdentifiers( dataSets ), "," ) + ") ";
+            sql += hlp.whereAnd() + " ds.datasetid in (" + StringUtils.join( IdentifiableObjectUtils.getIdentifiers( dataSets ), "," ) + ") ";
         }
 
         sql += "group by ou_uid";
@@ -264,7 +265,7 @@ public class HibernateOrganisationUnitStore
             Set<String> dataSetIds = SqlUtils.getArrayAsSet( rs, "ds_uid" );
 
             map.put( organisationUnitId, dataSetIds );
-        } );
+        });
 
         return map;
     }
@@ -272,34 +273,23 @@ public class HibernateOrganisationUnitStore
     @Override
     public List<OrganisationUnit> getWithinCoordinateArea( double[] box )
     {
-        // can't use hibernate-spatial 'makeenvelope' function, because not
-        // available in
+        // can't use hibernate-spatial 'makeenvelope' function, because not available in
         // current hibernate version
         // see: https://hibernate.atlassian.net/browse/HHH-13083
 
         if ( box != null && box.length == 4 )
         {
             return getSession().createQuery(
-                "from OrganisationUnit ou " + "where within(ou.geometry, " + doMakeEnvelopeSql( box ) + ") = true",
-                OrganisationUnit.class ).getResultList();
+                    "from OrganisationUnit ou " + "where within(ou.geometry, " + doMakeEnvelopeSql( box ) + ") = true",
+                    OrganisationUnit.class ).getResultList();
         }
         return new ArrayList<>();
     }
 
     private String doMakeEnvelopeSql( double[] box )
     {
-        // equivalent to: postgis 'ST_MakeEnvelope'
-        // (https://postgis.net/docs/ST_MakeEnvelope.html)
+        // equivalent to: postgis 'ST_MakeEnvelope' (https://postgis.net/docs/ST_MakeEnvelope.html)
         return "ST_MakeEnvelope(" + box[1] + "," + box[0] + "," + box[3] + "," + box[2] + ", 4326)";
-    }
-
-    @Override
-    public List<String> getUIDsCreatedBefore( Date date )
-    {
-        Query<String> query = getTypedQuery( "select uid from OrganisationUnit ou where created < :date" );
-        query.setParameter( "date", date );
-
-        return query.getResultList();
     }
 
     // -------------------------------------------------------------------------
@@ -319,8 +309,8 @@ public class HibernateOrganisationUnitStore
     {
         Timestamp now = new Timestamp( new Date().getTime() );
 
-        final String sql = "update organisationunit " + "set parentid=" + parentId + ", lastupdated='" + now + "' "
-            + "where organisationunitid=" + organisationUnitId;
+        final String sql = "update organisationunit " + "set parentid=" + parentId + ", lastupdated='"
+            + now + "' " + "where organisationunitid=" + organisationUnitId;
 
         jdbcTemplate.execute( sql );
     }
@@ -343,8 +333,8 @@ public class HibernateOrganisationUnitStore
     {
         String hql = "select max(ou.hierarchyLevel) from OrganisationUnit ou";
 
-        Query<Integer> query = getTypedQuery( hql );
-        Integer maxLength = query.getSingleResult();
+        Query<Integer> query =  getTypedQuery( hql );
+        Integer maxLength =  query.getSingleResult();
 
         return maxLength != null ? maxLength : 0;
     }

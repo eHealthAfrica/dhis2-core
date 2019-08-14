@@ -1,4 +1,5 @@
-package org.hisp.dhis.cache;
+package org.hisp.dhis.sms.listener;
+
 /*
  * Copyright (c) 2004-2019, University of Oslo
  * All rights reserved.
@@ -27,40 +28,42 @@ package org.hisp.dhis.cache;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import org.hisp.dhis.external.conf.DhisConfigurationProvider;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
+import java.util.Base64;
+import java.util.Date;
 
-/**
- * Provides cache builder to build instances.
- *
- * @author Ameen Mohamed
- *
- */
-@Component( "cacheProvider" )
-public class DefaultCacheProvider implements CacheProvider
+import org.hisp.dhis.DhisConvenienceTest;
+import org.hisp.dhis.sms.incoming.IncomingSms;
+import org.hisp.dhis.smscompression.SMSCompressionException;
+import org.hisp.dhis.smscompression.SMSSubmissionWriter;
+import org.hisp.dhis.smscompression.models.SMSMetadata;
+import org.hisp.dhis.smscompression.models.SMSSubmission;
+import org.hisp.dhis.user.User;
+
+public class CompressionSMSListenerTest
+    extends
+    DhisConvenienceTest
 {
-    private DhisConfigurationProvider configurationProvider;
+    protected static final String SUCCESS_MESSAGE = "1:0::Submission has been processed successfully";
 
-    private RedisTemplate<String, ?> redisTemplate;
+    protected static final String ORIGINATOR = "47400000";
 
-    @Override
-    public <V> ExtendedCacheBuilder<V> newCacheBuilder( Class<V> valueType )
+    protected static final String ATTRIBUTE_VALUE = "TEST";
+
+    protected IncomingSms createSMSFromSubmission( SMSSubmission subm )
+        throws SMSCompressionException
     {
-        return new ExtendedCacheBuilder<V>( redisTemplate, configurationProvider );
-    }
+        User user = createUser( 'U' );
+        SMSMetadata meta = new SMSMetadata();
+        meta.lastSyncDate = new Date();
+        SMSSubmissionWriter writer = new SMSSubmissionWriter( meta );
+        String smsText = Base64.getEncoder().encodeToString( writer.compress( subm ) );
 
-    @Autowired
-    public void setConfigurationProvider( DhisConfigurationProvider configurationProvider )
-    {
-        this.configurationProvider = configurationProvider;
-    }
+        IncomingSms incomingSms = new IncomingSms();
+        incomingSms.setText( smsText );
+        incomingSms.setOriginator( ORIGINATOR );
+        incomingSms.setUser( user );
 
-    @Autowired( required = false )
-    public void setRedisTemplate( RedisTemplate<String, ?> redisTemplate )
-    {
-        this.redisTemplate = redisTemplate;
+        return incomingSms;
     }
 
 }

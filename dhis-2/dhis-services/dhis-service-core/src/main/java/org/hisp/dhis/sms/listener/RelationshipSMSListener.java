@@ -28,9 +28,8 @@ package org.hisp.dhis.sms.listener;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import java.util.Date;
-
 import org.hisp.dhis.category.CategoryService;
+import org.hisp.dhis.common.IdentifiableObjectManager;
 import org.hisp.dhis.dataelement.DataElementService;
 import org.hisp.dhis.message.MessageSender;
 import org.hisp.dhis.organisationunit.OrganisationUnitService;
@@ -61,11 +60,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
+
 @Component( "org.hisp.dhis.sms.listener.RelationshipSMSListener" )
 @Transactional
 public class RelationshipSMSListener
     extends
-    NewSMSListener
+    CompressionSMSListener
 {
 
     private enum RelationshipDir
@@ -87,10 +88,12 @@ public class RelationshipSMSListener
         ProgramService programService, OrganisationUnitService organisationUnitService, CategoryService categoryService,
         DataElementService dataElementService, ProgramStageInstanceService programStageInstanceService,
         RelationshipService relationshipService, RelationshipTypeService relationshipTypeService,
-        TrackedEntityInstanceService trackedEntityInstanceService, ProgramInstanceService programInstanceService )
+        TrackedEntityInstanceService trackedEntityInstanceService, ProgramInstanceService programInstanceService,
+        IdentifiableObjectManager identifiableObjectManager )
     {
         super( incomingSmsService, smsSender, userService, trackedEntityTypeService, trackedEntityAttributeService,
-            programService, organisationUnitService, categoryService, dataElementService, programStageInstanceService );
+            programService, organisationUnitService, categoryService, dataElementService, programStageInstanceService,
+            identifiableObjectManager );
 
         this.relationshipService = relationshipService;
         this.relationshipTypeService = relationshipTypeService;
@@ -128,7 +131,6 @@ public class RelationshipSMSListener
         rel.setCreated( new Date() );
         rel.setLastUpdated( new Date() );
         // TODO: Are there values we need to account for in relationships?
-//              rel.setAttributeValues(attributeValues);
 
         relationshipService.addRelationship( rel );
 

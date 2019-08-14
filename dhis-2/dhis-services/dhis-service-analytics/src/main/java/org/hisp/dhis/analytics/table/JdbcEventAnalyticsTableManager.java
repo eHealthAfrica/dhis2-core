@@ -113,7 +113,7 @@ public class JdbcEventAnalyticsTableManager
         new AnalyticsTableColumn( quote( "pistatus" ), CHARACTER_50, "pi.status" ),
         new AnalyticsTableColumn( quote( "psistatus" ), CHARACTER_50, "psi.status" ),
         new AnalyticsTableColumn( quote( "psigeometry" ), GEOMETRY, "psi.geometry" ).withIndexType( "gist" ),
-        // TODO lat and lng deprecated in 2.30, should be removed after 2.33
+        // TODO latitude and longitude deprecated in 2.30, should be removed after 2.33
         new AnalyticsTableColumn( quote( "longitude" ), DOUBLE, "CASE WHEN 'POINT' = GeometryType(psi.geometry) THEN ST_X(psi.geometry) ELSE null END" ),
         new AnalyticsTableColumn( quote( "latitude" ), DOUBLE, "CASE WHEN 'POINT' = GeometryType(psi.geometry) THEN ST_Y(psi.geometry) ELSE null END" ),
         new AnalyticsTableColumn( quote( "ou" ), CHARACTER_11, NOT_NULL, "ou.uid" ),
@@ -131,9 +131,7 @@ public class JdbcEventAnalyticsTableManager
     @Transactional
     public List<AnalyticsTable> getAnalyticsTables( AnalyticsTableUpdateParams params )
     {
-        Date earliest = params.getFromDate();
-
-        log.info( String.format( "Get tables using earliest: %s, spatial support: %b", earliest, databaseInfo.isSpatialSupport() ) );
+        log.info( String.format( "Get tables using earliest: %s, spatial support: %b", params.getFromDate(), databaseInfo.isSpatialSupport() ) );
 
         List<AnalyticsTable> tables = new ArrayList<>();
 
@@ -143,7 +141,7 @@ public class JdbcEventAnalyticsTableManager
 
         for ( Program program : programs )
         {
-            List<Integer> dataYears = getDataYears( program, earliest );
+            List<Integer> dataYears = getDataYears( params, program );
 
             Collections.sort( dataYears );
 
@@ -232,19 +230,19 @@ public class JdbcEventAnalyticsTableManager
             .map( l -> toCharColumn( quote( l.getUid() ), "acs", l.getCreated() ) ).collect( Collectors.toList() ) );
         columns.addAll( addPeriodColumns( "dps" ) );
 
-        columns.addAll( program.getDataElements().stream().map( de ->
-                getColumnFromDataElement( de, false ) ).flatMap( Collection::stream ).collect( Collectors.toList() ) );
+        columns.addAll( program.getDataElements().stream()
+            .map( de -> getColumnFromDataElement( de, false ) ).flatMap( Collection::stream ).collect( Collectors.toList() ) );
 
-        columns.addAll( program.getDataElementsWithLegendSet().stream().map(de ->
-                getColumnFromDataElement(de, true)).flatMap(Collection::stream).collect( Collectors.toList() ) );
+        columns.addAll( program.getDataElementsWithLegendSet().stream()
+            .map( de -> getColumnFromDataElement( de, true) ).flatMap( Collection::stream ).collect( Collectors.toList() ) );
 
         columns.addAll( program.getNonConfidentialTrackedEntityAttributes().stream()
-                .map( tea -> getColumnFromTrackedEntityAttribute( tea, numericClause, dateClause, false ) )
-                .flatMap( Collection::stream ).collect( Collectors.toList() ) );
+            .map( tea -> getColumnFromTrackedEntityAttribute( tea, numericClause, dateClause, false ) )
+            .flatMap( Collection::stream ).collect( Collectors.toList() ) );
 
-        columns.addAll( program.getNonConfidentialTrackedEntityAttributesWithLegendSet().stream().map(tea ->
-                        getColumnFromTrackedEntityAttribute( tea, numericClause, dateClause, true ) )
-                        .flatMap(Collection::stream).collect( Collectors.toList() ) );
+        columns.addAll( program.getNonConfidentialTrackedEntityAttributesWithLegendSet().stream()
+            .map( tea -> getColumnFromTrackedEntityAttribute( tea, numericClause, dateClause, true ) )
+            .flatMap( Collection::stream ).collect( Collectors.toList() ) );
 
         columns.addAll( getFixedColumns() );
 
@@ -256,7 +254,7 @@ public class JdbcEventAnalyticsTableManager
 
         return filterDimensionColumns( columns );
     }
-    
+
     private List<AnalyticsTableColumn> getColumnFromTrackedEntityAttribute( TrackedEntityAttribute attribute,
         String numericClause, String dateClause, boolean withLegendSet)
     {
@@ -267,18 +265,16 @@ public class JdbcEventAnalyticsTableManager
         String select = getSelectClause( attribute.getValueType(), "value" );
         boolean skipIndex = NO_INDEX_VAL_TYPES.contains( attribute.getValueType() ) && !attribute.hasOptionSet();
 
-        if ( attribute.getValueType().isOrganisationUnit() && databaseInfo.isSpatialSupport() ) {
-            String geoSql = selectForInsert(attribute, "ou.geometry from organisationunit ou where ou.uid = (select value", dataClause);
-            columns.add(new AnalyticsTableColumn(
-                 attribute.getUid()  + OU_GEOMETRY_COL_SUFFIX , GEOMETRY, geoSql ).withSkipIndex( skipIndex ));
+        if ( attribute.getValueType().isOrganisationUnit() && databaseInfo.isSpatialSupport() )
+        {
+            String geoSql = selectForInsert( attribute, "ou.geometry from organisationunit ou where ou.uid = (select value", dataClause );
+            columns.add( new AnalyticsTableColumn( attribute.getUid() + OU_GEOMETRY_COL_SUFFIX , GEOMETRY, geoSql ).withSkipIndex( skipIndex ) );
         }
 
-        columns.add(new AnalyticsTableColumn(
-            quote( attribute.getUid() ), dataType,
-            selectForInsert(attribute, select, dataClause) ).withSkipIndex( skipIndex ));
+        columns.add( new AnalyticsTableColumn( quote( attribute.getUid() ), dataType,
+            selectForInsert( attribute, select, dataClause ) ).withSkipIndex( skipIndex ) );
 
-        return withLegendSet ? getColumnFromTrackedEntityAttributeWithLegendSet(attribute, numericClause)
-            : columns;
+        return withLegendSet ? getColumnFromTrackedEntityAttributeWithLegendSet( attribute, numericClause ) : columns;
     }
 
     private List<AnalyticsTableColumn> getColumnFromTrackedEntityAttributeWithLegendSet(
@@ -300,7 +296,7 @@ public class JdbcEventAnalyticsTableManager
             return new AnalyticsTableColumn( column, CHARACTER_11, sql );
         } ).collect( Collectors.toList() );
     }
-    
+
     private List<AnalyticsTableColumn> getColumnFromDataElement( DataElement dataElement, boolean withLegendSet )
     {
         List<AnalyticsTableColumn> columns = new ArrayList<>();
@@ -360,7 +356,7 @@ public class JdbcEventAnalyticsTableManager
             return new AnalyticsTableColumn( column, CHARACTER_11, sql );
         } ).collect( Collectors.toList() );
     }
-    
+
     private String getDataClause( String uid, ValueType valueType )
     {
         if ( valueType.isNumeric() || valueType.isDate() )
@@ -373,19 +369,20 @@ public class JdbcEventAnalyticsTableManager
         return "";
     }
 
-    private List<Integer> getDataYears( Program program, Date earliest )
+    private List<Integer> getDataYears( AnalyticsTableUpdateParams params, Program program )
     {
         String sql =
             "select distinct(extract(year from psi.executiondate)) " +
             "from programstageinstance psi " +
             "inner join programinstance pi on psi.programinstanceid = pi.programinstanceid " +
-            "where pi.programid = " + program.getId() + " " +
+            "where psi.lastupdated <= '" + getLongDateString( params.getStartTime() ) + "' " +
+            "and pi.programid = " + program.getId() + " " +
             "and psi.executiondate is not null " +
             "and psi.deleted is false ";
 
-        if ( earliest != null )
+        if ( params.getFromDate() != null )
         {
-            sql += "and psi.executiondate >= '" + DateUtils.getMediumDateString( earliest ) + "'";
+            sql += "and psi.executiondate >= '" + DateUtils.getMediumDateString( params.getFromDate() ) + "'";
         }
 
         return jdbcTemplate.queryForList( sql, Integer.class );
